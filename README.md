@@ -2,6 +2,7 @@
 
 
 
+
 class MainActivity : AppCompatActivity() {
 
     private lateinit var billingClient:BillingClient
@@ -23,7 +24,10 @@ class MainActivity : AppCompatActivity() {
             if (billingResult.responseCode==BillingResponseCode.OK && purchases!=null){
 
                 for (i in purchases){
-                    handlePurchase(i)
+
+                    //handlePurchaseNonConsumableProduct(i)
+                    handlePurchaseConsumableProduct(i)
+
                 }
 
                 println("pUL tetiklendi!")
@@ -128,7 +132,8 @@ class MainActivity : AppCompatActivity() {
 
     }
 
-    private fun handlePurchase(purchase: Purchase){
+    //tüketilmeyen ve yalnızca 1 kere alınabilen ürünlerin doğrulanması
+    private fun handlePurchaseNonConsumableProduct(purchase: Purchase){
 
 
         if (purchase.purchaseState==Purchase.PurchaseState.PURCHASED){
@@ -158,5 +163,62 @@ class MainActivity : AppCompatActivity() {
 
         }
 
+    }
+
+
+    //tüketilen ve birden fazla kez alınabilen ürünlerin doğrulanması
+    private fun handlePurchaseConsumableProduct(purchase: Purchase){
+
+        val consumeParams=
+            ConsumeParams.newBuilder()
+                .setPurchaseToken(purchase.purchaseToken)
+                .build()
+
+        val consumeResult= CoroutineScope(Dispatchers.IO).launch {
+
+            billingClient.consumePurchase(consumeParams)
+
+        }
+
+        verification(purchase)
+
+    }
+
+    private fun verification(purchase: Purchase){
+
+        if(purchase.purchaseState==Purchase.PurchaseState.PURCHASED){
+
+            //security verify işlemi
+            if(!verifyValidSignature(purchase.originalJson,purchase.signature)){
+                //doğrulama başarısız..
+                println("doğrulama başarısız")
+                return
+            }
+
+
+            println("doğrulama başarılı")
+
+        }
+
+    }
+
+    private fun verifyValidSignature(signedData:String, signature:String):Boolean{
+
+        return try{
+            val base64Key="Your app license code get in Google play account monetizing section"
+            val security=Security()
+
+            security.verifyPurchase(base64Key,signedData,signature)
+        } catch(e: Exception){
+            false
+        }
+
+
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+
+        billingClient.endConnection()
     }
 }

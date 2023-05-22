@@ -9,15 +9,18 @@ import com.android.billingclient.api.BillingClient.ProductType
 import com.android.billingclient.api.BillingClientStateListener
 import com.android.billingclient.api.BillingFlowParams
 import com.android.billingclient.api.BillingResult
+import com.android.billingclient.api.ConsumeParams
 import com.android.billingclient.api.ProductDetails
 import com.android.billingclient.api.Purchase
 import com.android.billingclient.api.PurchasesResult
 import com.android.billingclient.api.PurchasesUpdatedListener
 import com.android.billingclient.api.QueryProductDetailsParams
+import com.android.billingclient.api.consumePurchase
 import com.lafimsize.inappbilling.databinding.ActivityMainBinding
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class MainActivity : AppCompatActivity() {
 
@@ -40,7 +43,10 @@ class MainActivity : AppCompatActivity() {
             if (billingResult.responseCode==BillingResponseCode.OK && purchases!=null){
 
                 for (i in purchases){
-                    handlePurchase(i)
+
+                    //handlePurchaseNonConsumableProduct(i)
+                    handlePurchaseConsumableProduct(i)
+
                 }
 
                 println("pUL tetiklendi!")
@@ -145,7 +151,8 @@ class MainActivity : AppCompatActivity() {
 
     }
 
-    private fun handlePurchase(purchase: Purchase){
+    //tüketilmeyen ve yalnızca 1 kere alınabilen ürünlerin doğrulanması
+    private fun handlePurchaseNonConsumableProduct(purchase: Purchase){
 
 
         if (purchase.purchaseState==Purchase.PurchaseState.PURCHASED){
@@ -172,6 +179,21 @@ class MainActivity : AppCompatActivity() {
 
             }
 
+
+        }
+
+    }
+
+    private fun handlePurchaseConsumableProduct(purchase: Purchase){
+
+        val consumeParams=
+            ConsumeParams.newBuilder()
+                .setPurchaseToken(purchase.purchaseToken)
+                .build()
+
+        val consumeResult= CoroutineScope(Dispatchers.IO).launch {
+
+            billingClient.consumePurchase(consumeParams)
 
         }
 

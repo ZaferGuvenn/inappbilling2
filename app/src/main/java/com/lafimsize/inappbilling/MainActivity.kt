@@ -21,6 +21,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.IOException
 
 class MainActivity : AppCompatActivity() {
 
@@ -184,6 +185,8 @@ class MainActivity : AppCompatActivity() {
 
     }
 
+
+    //tüketilen ve birden fazla kez alınabilen ürünlerin doğrulanması
     private fun handlePurchaseConsumableProduct(purchase: Purchase){
 
         val consumeParams=
@@ -197,5 +200,45 @@ class MainActivity : AppCompatActivity() {
 
         }
 
+        verification(purchase)
+
+    }
+
+    private fun verification(purchase: Purchase){
+
+        if(purchase.purchaseState==Purchase.PurchaseState.PURCHASED){
+
+            //security verify işlemi
+            if(!verifyValidSignature(purchase.originalJson,purchase.signature)){
+                //doğrulama başarısız..
+                println("doğrulama başarısız")
+                return
+            }
+
+
+            println("doğrulama başarılı")
+
+        }
+
+    }
+
+    private fun verifyValidSignature(signedData:String, signature:String):Boolean{
+
+        return try{
+            val base64Key="Your app license code get in Google play account monetizing section"
+            val security=Security()
+
+            security.verifyPurchase(base64Key,signedData,signature)
+        } catch(e: Exception){
+            false
+        }
+
+
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+
+        billingClient.endConnection()
     }
 }
